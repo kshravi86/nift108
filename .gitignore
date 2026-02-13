@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 .venv/
 *.csv
+vertex_pipeline/astrology_nn_pipeline.json

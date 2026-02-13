@@ -5,6 +5,8 @@ Python script to download NIFTY 50 (`^NSEI`) daily data for the last 3 years and
 ## Files
 
 - `fetch_nifty50_last_3_years.py` - downloads NIFTY 50 data from Yahoo Finance.
+- `generate_nakshatra_for_nifty_dates.py` - generates planetary Nakshatra/Pada data per NIFTY date.
+- `vertex_pipeline/` - Vertex AI pipeline for astrology-only neural network training/evaluation.
 - `requirements.txt` - python dependencies.
 
 ## Usage
