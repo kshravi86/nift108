@@ -29,18 +29,26 @@ def configure_logging(log_file: Path, verbose: bool = False) -> None:
     logging.basicConfig(level=level, handlers=[file_handler, stream_handler])
 
 
-def fetch_nifty_data(ticker: str, years: int) -> pd.DataFrame:
-    end = pd.Timestamp.today().normalize()
-    start = end - pd.DateOffset(years=years)
-
-    df = yf.download(
-        ticker,
-        start=start.date().isoformat(),
-        end=(end + pd.Timedelta(days=1)).date().isoformat(),
-        interval="1d",
-        auto_adjust=False,
-        progress=False,
-    )
+def fetch_nifty_data(ticker: str, years: int, full_history: bool = False) -> pd.DataFrame:
+    if full_history:
+        df = yf.download(
+            ticker,
+            period="max",
+            interval="1d",
+            auto_adjust=False,
+            progress=False,
+        )
+    else:
+        end = pd.Timestamp.today().normalize()
+        start = end - pd.DateOffset(years=years)
+        df = yf.download(
+            ticker,
+            start=start.date().isoformat(),
+            end=(end + pd.Timedelta(days=1)).date().isoformat(),
+            interval="1d",
+            auto_adjust=False,
+            progress=False,
+        )
 
     if df.empty:
         raise RuntimeError(f"No data returned for ticker '{ticker}'.")
@@ -71,6 +79,11 @@ def main() -> None:
         help="Log file path",
     )
     parser.add_argument(
+        "--full-history",
+        action="store_true",
+        help="Download full available history from source (period=max).",
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="Enable debug logging",
@@ -89,13 +102,18 @@ def main() -> None:
         log_path.resolve(),
     )
 
-    data = fetch_nifty_data(args.ticker, args.years)
+    data = fetch_nifty_data(args.ticker, args.years, full_history=args.full_history)
 
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     data.to_csv(output_path, index=False)
 
     logging.info("Saved %s rows to: %s", len(data), output_path.resolve())
+    logging.info(
+        "Date range | start=%s | end=%s",
+        data["Date"].min(),
+        data["Date"].max(),
+    )
     logging.info("Job completed successfully")
 
 
