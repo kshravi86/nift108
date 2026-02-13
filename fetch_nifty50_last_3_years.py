@@ -23,6 +23,11 @@ def fetch_nifty_data(ticker: str, years: int) -> pd.DataFrame:
     if df.empty:
         raise RuntimeError(f"No data returned for ticker '{ticker}'.")
 
+    # yfinance may return MultiIndex columns when using a ticker symbol.
+    # Flatten to simple OHLCV column names for clean CSV output.
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = [col[0] for col in df.columns]
+
     df.index.name = "Date"
     return df.reset_index()
 
