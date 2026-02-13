@@ -1,10 +1,32 @@
 import argparse
+import logging
+import sys
 from pathlib import Path
 
 import pandas as pd
 import yfinance as yf
 
 DEFAULT_TICKER = "^NSEI"  # NIFTY 50 index on Yahoo Finance
+
+
+def configure_logging(log_file: Path, verbose: bool = False) -> None:
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    level = logging.DEBUG if verbose else logging.INFO
+
+    formatter = logging.Formatter(
+        fmt="%(asctime)s | %(levelname)s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+    file_handler = logging.FileHandler(log_file, encoding="utf-8")
+    file_handler.setFormatter(formatter)
+    file_handler.setLevel(level)
+
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setFormatter(formatter)
+    stream_handler.setLevel(level)
+
+    logging.basicConfig(level=level, handlers=[file_handler, stream_handler])
 
 
 def fetch_nifty_data(ticker: str, years: int) -> pd.DataFrame:
@@ -43,7 +65,29 @@ def main() -> None:
         default="nifty50_last_3_years.csv",
         help="Output CSV file path",
     )
+    parser.add_argument(
+        "--log-file",
+        default="logs/nifty50_fetch.log",
+        help="Log file path",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable debug logging",
+    )
     args = parser.parse_args()
+
+    log_path = Path(args.log_file)
+    configure_logging(log_path, args.verbose)
+
+    logging.info("Job started")
+    logging.info(
+        "Parameters | ticker=%s | years=%s | output=%s | log_file=%s",
+        args.ticker,
+        args.years,
+        args.output,
+        log_path.resolve(),
+    )
 
     data = fetch_nifty_data(args.ticker, args.years)
 
@@ -51,8 +95,13 @@ def main() -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     data.to_csv(output_path, index=False)
 
-    print(f"Saved {len(data)} rows to: {output_path.resolve()}")
+    logging.info("Saved %s rows to: %s", len(data), output_path.resolve())
+    logging.info("Job completed successfully")
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        logging.exception("Job failed")
+        raise
