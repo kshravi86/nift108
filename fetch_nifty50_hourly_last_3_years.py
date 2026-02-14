@@ -91,43 +91,50 @@ def fetch_hourly_nifty(
     retries: int,
     retry_sleep_secs: float,
 ) -> pd.DataFrame:
-    # Use UTC boundaries for consistent chunking.
-    end_utc = pd.Timestamp.utcnow() + pd.Timedelta(days=1)
-    start_utc = end_utc - pd.DateOffset(years=years)
+    # Use UTC boundaries for consistent chunking. For intraday, providers often enforce a
+    # rolling retention window (e.g. ~730 days for 60m). We crawl *backwards* from now so
+    # we capture the newest available data first, then stop once older chunks are empty.
+    end_utc = (pd.Timestamp.utcnow().floor("min") + pd.Timedelta(days=1)).tz_localize(None)
+    start_utc = (end_utc - pd.DateOffset(years=years)).tz_localize(None)
 
     logging.info("Requested date range (UTC) | start=%s end=%s", start_utc, end_utc)
     logging.info("Interval=%s | chunk_days=%s", interval, chunk_days)
 
     chunks: list[pd.DataFrame] = []
 
-    cursor = start_utc
+    cursor_end = end_utc
     empty_streak = 0
-    while cursor < end_utc:
-        chunk_end = min(cursor + pd.Timedelta(days=chunk_days), end_utc)
-        logging.info("Downloading chunk | start=%s end=%s", cursor, chunk_end)
+    while cursor_end > start_utc:
+        cursor_start = max(cursor_end - pd.Timedelta(days=chunk_days), start_utc)
+        logging.info("Downloading chunk | start=%s end=%s", cursor_start, cursor_end)
 
         df = _download_chunk(
             ticker=ticker,
             interval=interval,
-            start=cursor,
-            end=chunk_end,
+            start=cursor_start,
+            end=cursor_end,
             retries=retries,
             retry_sleep_secs=retry_sleep_secs,
         )
 
         if df.empty:
             empty_streak += 1
-            logging.warning("No data returned for chunk | start=%s end=%s", cursor, chunk_end)
-            # Yahoo often returns empty for intraday ranges outside their retention window.
-            # If we get repeated empties, stop early.
-            if empty_streak >= 3:
-                logging.warning("Stopping early due to repeated empty chunks (likely retention limit).")
+            logging.warning(
+                "No data returned for chunk | start=%s end=%s (empty_streak=%s)",
+                cursor_start,
+                cursor_end,
+                empty_streak,
+            )
+            if chunks and empty_streak >= 3:
+                logging.warning(
+                    "Stopping early due to repeated empty chunks after having data (likely source retention limit)."
+                )
                 break
         else:
             empty_streak = 0
             chunks.append(df)
 
-        cursor = chunk_end
+        cursor_end = cursor_start
 
     if not chunks:
         raise RuntimeError(
@@ -230,4 +237,3 @@ if __name__ == "__main__":
     except Exception:
         logging.exception("Job failed")
         raise
-
