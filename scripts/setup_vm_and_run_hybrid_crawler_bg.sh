@@ -42,7 +42,7 @@ sudo "${VENV_PY}" -m playwright install-deps chromium
 
 echo "[5/6] Launching crawler in background..."
 chmod +x scripts/run_hybrid_crawler_bg.sh
-LAUNCH_OUT="$(./scripts/run_hybrid_crawler_bg.sh "${REPO_DIR}" "${HTTP_CONCURRENCY}" "${PW_CONCURRENCY}" "${MAX_PAGES}")"
+LAUNCH_OUT="$(PYTHON_BIN="${VENV_PY}" ./scripts/run_hybrid_crawler_bg.sh "${REPO_DIR}" "${HTTP_CONCURRENCY}" "${PW_CONCURRENCY}" "${MAX_PAGES}")"
 echo "${LAUNCH_OUT}"
 
 echo "[6/6] Tailing latest log..."
@@ -56,4 +56,3 @@ if [ -z "${STDOUT_LOG}" ]; then
 fi
 echo "Tailing: ${STDOUT_LOG}"
 tail -f "${STDOUT_LOG}"
-

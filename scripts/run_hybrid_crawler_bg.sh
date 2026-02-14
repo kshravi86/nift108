@@ -24,7 +24,23 @@ CRAWLER="${CRAWLER:-$REPO_DIR/crawl_gcp_docs_hybrid_httpx_playwright.py}"
 
 cd "$REPO_DIR"
 
-nohup env PYTHONUNBUFFERED=1 python3 "$CRAWLER" \
+PYTHON_BIN="${PYTHON_BIN:-}"
+if [ -z "${PYTHON_BIN}" ]; then
+  if [ -x "${REPO_DIR}/.venv/bin/python" ]; then
+    PYTHON_BIN="${REPO_DIR}/.venv/bin/python"
+  else
+    PYTHON_BIN="$(command -v python3 || command -v python)"
+  fi
+fi
+
+if ! "${PYTHON_BIN}" -c "import httpx, bs4, playwright" >/dev/null 2>&1; then
+  echo "ERROR: Missing Python deps for crawler in ${PYTHON_BIN}."
+  echo "Install: pip install httpx beautifulsoup4 playwright"
+  echo "Or run: python3 -m venv .venv && ./.venv/bin/pip install httpx beautifulsoup4 playwright"
+  exit 1
+fi
+
+nohup env PYTHONUNBUFFERED=1 "${PYTHON_BIN}" "$CRAWLER" \
   --http-concurrency "$HTTP_CONCURRENCY" \
   --playwright-concurrency "$PW_CONCURRENCY" \
   --max-pages "$MAX_PAGES" \
@@ -40,3 +56,4 @@ echo "OUTPUT:$OUTPUT_PATH"
 echo "STATE:$STATE_PATH"
 echo "LOG:$LOG_PATH"
 echo "STDOUT_LOG:${LOG_PATH}.stdout"
+echo "PYTHON:${PYTHON_BIN}"
