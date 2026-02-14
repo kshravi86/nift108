@@ -6,6 +6,7 @@ import json
 import math
 import os
 import random
+import socket
 from pathlib import Path
 
 import numpy as np
@@ -183,10 +184,50 @@ def build_model(train_df: pd.DataFrame, learning_rate: float) -> tf.keras.Model:
 
 
 def get_strategy() -> tf.distribute.Strategy:
-    resolver = tf.distribute.cluster_resolver.TPUClusterResolver(tpu="local")
-    tf.config.experimental_connect_to_cluster(resolver)
-    tf.tpu.experimental.initialize_tpu_system(resolver)
-    return tf.distribute.TPUStrategy(resolver)
+    candidates = []
+    for env_key in ("TPU_RESOLVER", "TPU_NAME", "TPU_ENDPOINT"):
+        env_val = os.environ.get(env_key, "").strip()
+        if env_val:
+            candidates.append(env_val)
+
+    candidates.extend([None, "local", "grpc://127.0.0.1:8470"])
+    try:
+        internal_ip = socket.gethostbyname(socket.gethostname())
+        if internal_ip and internal_ip != "127.0.0.1":
+            candidates.append(f"grpc://{internal_ip}:8470")
+    except Exception:
+        pass
+
+    deduped = []
+    for c in candidates:
+        if c not in deduped:
+            deduped.append(c)
+
+    failures = []
+    for target in deduped:
+        target_label = "default" if target is None else target
+        try:
+            resolver = (
+                tf.distribute.cluster_resolver.TPUClusterResolver()
+                if target is None
+                else tf.distribute.cluster_resolver.TPUClusterResolver(tpu=target)
+            )
+            tf.config.experimental_connect_to_cluster(resolver)
+            tf.tpu.experimental.initialize_tpu_system(resolver)
+            logical = tf.config.list_logical_devices("TPU")
+            print(
+                f"TPU init success via '{target_label}' with {len(logical)} TPU devices.",
+                flush=True,
+            )
+            return tf.distribute.TPUStrategy(resolver)
+        except Exception as exc:
+            failures.append(f"{target_label}: {exc}")
+            print(f"TPU init failed via '{target_label}': {exc}", flush=True)
+
+    raise RuntimeError(
+        "Unable to initialize TPU via any resolver target:\n"
+        + "\n".join(failures)
+    )
 
 
 def evaluate_predictions(valid_df: pd.DataFrame, pred: np.ndarray) -> dict:
@@ -297,4 +338,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
