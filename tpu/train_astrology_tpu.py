@@ -141,8 +141,8 @@ def make_tf_dataset(
     batch_size: int,
     shuffle: bool,
 ) -> tf.data.Dataset:
-    x = {c: frame[c].to_numpy() for c in ASTROLOGY_FEATURES}
-    y = frame["open_close_diff"].to_numpy()
+    x = {c: frame[c].to_numpy(dtype=np.int32) for c in ASTROLOGY_FEATURES}
+    y = frame["open_close_diff"].to_numpy(dtype=np.float32)
     ds = tf.data.Dataset.from_tensor_slices((x, y))
     if shuffle:
         ds = ds.shuffle(min(len(frame), 20000), reshuffle_each_iteration=True)
@@ -150,17 +150,35 @@ def make_tf_dataset(
     return ds
 
 
-def build_model(train_df: pd.DataFrame, learning_rate: float) -> tf.keras.Model:
+def encode_categorical_features(
+    train_df: pd.DataFrame, valid_df: pd.DataFrame
+) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, int]]:
+    train_out = train_df.copy()
+    valid_out = valid_df.copy()
+    vocab_sizes: dict[str, int] = {}
+
+    for col in ASTROLOGY_FEATURES:
+        train_vals = train_out[col].astype(str)
+        valid_vals = valid_out[col].astype(str)
+
+        uniq = sorted(set(train_vals.tolist()))
+        mapping = {val: idx + 1 for idx, val in enumerate(uniq)}
+
+        train_out[col] = train_vals.map(mapping).fillna(0).astype("int32")
+        valid_out[col] = valid_vals.map(mapping).fillna(0).astype("int32")
+        vocab_sizes[col] = max(int(train_out[col].max()) + 1, 2)
+
+    return train_out, valid_out, vocab_sizes
+
+
+def build_model(vocab_sizes: dict[str, int], learning_rate: float) -> tf.keras.Model:
     inputs = {}
     encoded = []
     for col in ASTROLOGY_FEATURES:
-        inp = tf.keras.Input(shape=(1,), name=col, dtype=tf.string)
-        lookup = layers.StringLookup(output_mode="int", num_oov_indices=1)
-        lookup.adapt(train_df[col].to_numpy())
-        vocab_size = max(lookup.vocabulary_size(), 2)
+        inp = tf.keras.Input(shape=(1,), name=col, dtype=tf.int32)
+        vocab_size = max(vocab_sizes.get(col, 2), 2)
         emb_dim = min(16, max(4, vocab_size // 2))
-        x = lookup(inp)
-        x = layers.Embedding(vocab_size + 1, emb_dim, name=f"{col}_emb")(x)
+        x = layers.Embedding(vocab_size, emb_dim, name=f"{col}_emb")(inp)
         x = layers.Flatten()(x)
         inputs[col] = inp
         encoded.append(x)
@@ -288,6 +306,7 @@ def main() -> None:
     print("Loading data:", args.data_uri, flush=True)
     df = prepare_dataframe(load_data(args.data_uri))
     train_df, valid_df = split_train_valid(df)
+    train_df, valid_df, vocab_sizes = encode_categorical_features(train_df, valid_df)
     print(
         f"Rows train={len(train_df)} valid={len(valid_df)} "
         f"date_min={df['Date'].min().date()} date_max={df['Date'].max().date()}",
@@ -301,7 +320,7 @@ def main() -> None:
     valid_ds = make_tf_dataset(valid_df, args.batch_size, shuffle=False)
 
     with strategy.scope():
-        model = build_model(train_df, args.learning_rate)
+        model = build_model(vocab_sizes, args.learning_rate)
 
     early_stop = callbacks.EarlyStopping(
         monitor="val_loss",
