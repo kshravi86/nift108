@@ -18,9 +18,17 @@ HTTP_CONCURRENCY="${HTTP_CONCURRENCY:-20}"
 PW_CONCURRENCY="${PW_CONCURRENCY:-2}"
 MAX_PAGES="${MAX_PAGES:-10000}"
 
+# Avoid interactive apt prompts (e.g., needrestart "restart services?" dialog).
+# Ref: needrestart(1) supports NEEDRESTART_SUSPEND/NEEDRESTART_MODE.
+DEBIAN_FRONTEND="${DEBIAN_FRONTEND:-noninteractive}"
+NEEDRESTART_SUSPEND="${NEEDRESTART_SUSPEND:-1}"
+NEEDRESTART_MODE="${NEEDRESTART_MODE:-l}"
+
 echo "[1/6] Installing system packages..."
-sudo apt-get update -y
-sudo apt-get install -y git python3-pip python3-venv
+sudo DEBIAN_FRONTEND="${DEBIAN_FRONTEND}" NEEDRESTART_SUSPEND="${NEEDRESTART_SUSPEND}" NEEDRESTART_MODE="${NEEDRESTART_MODE}" \
+  apt-get update -y
+sudo DEBIAN_FRONTEND="${DEBIAN_FRONTEND}" NEEDRESTART_SUSPEND="${NEEDRESTART_SUSPEND}" NEEDRESTART_MODE="${NEEDRESTART_MODE}" \
+  apt-get install -y git python3-pip python3-venv
 
 echo "[2/6] Cloning/updating repo..."
 if [ -d "${REPO_DIR}/.git" ]; then
@@ -37,7 +45,8 @@ VENV_PY="${REPO_DIR}/.venv/bin/python"
 "${VENV_PY}" -m pip install httpx beautifulsoup4 playwright
 
 echo "[4/6] Installing Playwright system deps + Chromium..."
-sudo "${VENV_PY}" -m playwright install-deps chromium
+sudo DEBIAN_FRONTEND="${DEBIAN_FRONTEND}" NEEDRESTART_SUSPEND="${NEEDRESTART_SUSPEND}" NEEDRESTART_MODE="${NEEDRESTART_MODE}" \
+  "${VENV_PY}" -m playwright install-deps chromium
 "${VENV_PY}" -m playwright install chromium
 
 echo "[5/6] Launching crawler in background..."
