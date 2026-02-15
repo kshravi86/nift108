@@ -54,6 +54,17 @@ chmod +x scripts/run_hybrid_crawler_bg.sh
 LAUNCH_OUT="$(PYTHON_BIN="${VENV_PY}" ./scripts/run_hybrid_crawler_bg.sh "${REPO_DIR}" "${HTTP_CONCURRENCY}" "${PW_CONCURRENCY}" "${MAX_PAGES}")"
 echo "${LAUNCH_OUT}"
 
+TAIL="${TAIL:-1}"
+if [[ "${TAIL}" == "0" || "${TAIL}" == "false" || "${TAIL}" == "no" ]]; then
+  echo "[6/6] Skipping log tail (TAIL=${TAIL})."
+  STDOUT_LOG="$(echo "${LAUNCH_OUT}" | awk -F: '/^STDOUT_LOG:/{print $2}' | tail -n 1 | xargs || true)"
+  if [ -n "${STDOUT_LOG}" ]; then
+    echo "Follow logs with:"
+    echo "tail -f \"${STDOUT_LOG}\""
+  fi
+  exit 0
+fi
+
 echo "[6/6] Tailing latest log..."
 STDOUT_LOG="$(echo "${LAUNCH_OUT}" | awk -F: '/^STDOUT_LOG:/{print $2}' | tail -n 1 | xargs || true)"
 if [ -z "${STDOUT_LOG}" ] || [ ! -f "${STDOUT_LOG}" ]; then
