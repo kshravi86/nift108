@@ -7,6 +7,9 @@ set -euo pipefail
 #   ./scripts/setup_vm_and_run_hybrid_crawler_bg.sh
 #
 # Optional env vars:
+#   DETACH=1 (default) to background this setup script itself and write logs to SETUP_LOG
+#   SETUP_LOG=/path/to/setup.log (only used when DETACH=1)
+#   TAIL=1 (default when DETACH=0) to tail crawler stdout log; set TAIL=0 to skip tailing
 #   REPO_DIR=/home/<user>/nift108
 #   HTTP_CONCURRENCY=20
 #   PW_CONCURRENCY=2
@@ -17,6 +20,23 @@ REPO_DIR="${REPO_DIR:-$HOME/nift108}"
 HTTP_CONCURRENCY="${HTTP_CONCURRENCY:-20}"
 PW_CONCURRENCY="${PW_CONCURRENCY:-2}"
 MAX_PAGES="${MAX_PAGES:-10000}"
+
+# By default, detach this setup script so you can close SSH and let the job run.
+# To run in the foreground instead: DETACH=0 ./scripts/setup_vm_and_run_hybrid_crawler_bg.sh
+DETACH="${DETACH:-1}"
+if [[ "${DETACH}" == "1" && -z "${_SETUP_DETACHED:-}" && -t 1 ]]; then
+  SETUP_RUN_ID="${SETUP_RUN_ID:-setup_$(date +%Y%m%d_%H%M%S)}"
+  SETUP_LOG="${SETUP_LOG:-$HOME/${SETUP_RUN_ID}.log}"
+  # Re-run in background. Disable tailing in detached mode.
+  nohup env _SETUP_DETACHED=1 DETACH=0 TAIL=0 \
+    "$0" "$@" > "${SETUP_LOG}" 2>&1 < /dev/null &
+  PID="$!"
+  echo "STARTED_SETUP_PID:${PID}"
+  echo "SETUP_LOG:${SETUP_LOG}"
+  echo "Tail:"
+  echo "tail -f \"${SETUP_LOG}\""
+  exit 0
+fi
 
 # Avoid interactive apt prompts (e.g., needrestart "restart services?" dialog).
 # Ref: needrestart(1) supports NEEDRESTART_SUSPEND/NEEDRESTART_MODE.
