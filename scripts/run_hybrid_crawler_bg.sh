@@ -7,12 +7,12 @@ set -euo pipefail
 #   ./scripts/run_hybrid_crawler_bg.sh [REPO_DIR] [HTTP_CONCURRENCY] [PW_CONCURRENCY] [MAX_PAGES]
 #
 # Example:
-#   ./scripts/run_hybrid_crawler_bg.sh /home/Admin/nift108 15 2 2000
+#   ./scripts/run_hybrid_crawler_bg.sh /home/Admin/nift108 15 2 10000
 
 REPO_DIR="${1:-$HOME/nift108}"
 HTTP_CONCURRENCY="${2:-10}"
 PW_CONCURRENCY="${3:-2}"
-MAX_PAGES="${4:-2000}"
+MAX_PAGES="${4:-10000}"
 
 RUN_ID="${RUN_ID:-hybrid_$(date +%Y%m%d_%H%M%S)}"
 

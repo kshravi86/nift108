@@ -10,13 +10,13 @@ set -euo pipefail
 #   REPO_DIR=/home/<user>/nift108
 #   HTTP_CONCURRENCY=20
 #   PW_CONCURRENCY=2
-#   MAX_PAGES=2000
+#   MAX_PAGES=10000
 
 REPO_URL="https://github.com/kshravi86/nift108.git"
 REPO_DIR="${REPO_DIR:-$HOME/nift108}"
 HTTP_CONCURRENCY="${HTTP_CONCURRENCY:-20}"
 PW_CONCURRENCY="${PW_CONCURRENCY:-2}"
-MAX_PAGES="${MAX_PAGES:-2000}"
+MAX_PAGES="${MAX_PAGES:-10000}"
 
 echo "[1/6] Installing system packages..."
 sudo apt-get update -y

@@ -173,7 +173,7 @@ AREA_ORDER = [
 
 ALLOWED_DOMAIN = "docs.cloud.google.com"
 
-DEFAULT_MAX_PAGES = 2000
+DEFAULT_MAX_PAGES = 10000
 DEFAULT_HTTP_CONCURRENCY = 10
 DEFAULT_PLAYWRIGHT_CONCURRENCY = 2
 DEFAULT_SLEEP_SECS = 0.2
@@ -594,4 +594,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

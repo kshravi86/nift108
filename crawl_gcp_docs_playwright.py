@@ -160,7 +160,7 @@ AREA_ORDER = [
 ALLOWED_DOMAIN = "docs.cloud.google.com"
 ALLOWED_PATH_PREFIXES = [cfg["path_prefix"] for cfg in AREAS.values()]
 
-MAX_PAGES = 2000  # safety cap
+MAX_PAGES = 10000  # safety cap
 SLEEP_SECS = 1.0  # politeness delay
 OUTPUT_PATH = "gcp_docs_pmle_strict.jsonl"
 STATE_PATH = "gcp_crawl_state_pmle_strict.json"
