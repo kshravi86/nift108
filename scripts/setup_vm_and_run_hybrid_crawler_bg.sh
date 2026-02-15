@@ -26,7 +26,7 @@ MAX_PAGES="${MAX_PAGES:-10000}"
 # By default, detach this setup script so you can close SSH and let the job run.
 # To run in the foreground instead: DETACH=0 ./scripts/setup_vm_and_run_hybrid_crawler_bg.sh
 DETACH="${DETACH:-1}"
-if [[ "${DETACH}" == "1" && -z "${_SETUP_DETACHED:-}" && -t 1 ]]; then
+if [[ "${DETACH}" == "1" && -z "${_SETUP_DETACHED:-}" ]]; then
   SETUP_RUN_ID="${SETUP_RUN_ID:-setup_$(date +%Y%m%d_%H%M%S)}"
   SETUP_LOG="${SETUP_LOG:-$HOME/${SETUP_RUN_ID}.log}"
   # Re-run in background. Disable tailing in detached mode.
