@@ -149,7 +149,8 @@ def add_planet_nakshatras(
 
     out_rows = []
     total = len(df)
-    for i, dt_utc in enumerate(dts_utc.to_pydatetime(), start=1):
+    iter_dts = dts_utc.dt.to_pydatetime() if hasattr(dts_utc, "dt") else dts_utc.to_pydatetime()
+    for i, dt_utc in enumerate(iter_dts, start=1):
         jd_ut = datetime_to_jd_ut(dt_utc)
 
         row = {
@@ -270,4 +271,3 @@ if __name__ == "__main__":
     except Exception:
         logging.exception("Hourly Nakshatra job failed")
         raise
-
