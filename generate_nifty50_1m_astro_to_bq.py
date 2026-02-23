@@ -176,6 +176,56 @@ def main() -> None:
     out["Time"] = dt.dt.time
     out["Timezone"] = args.timezone
 
+    ordered_cols = [
+        "Datetime",
+        "Date",
+        "Time",
+        "Timezone",
+        "Ticker",
+        "Open",
+        "High",
+        "Low",
+        "Close",
+        "Adj_Close",
+        "Volume",
+        "Place",
+        "Latitude",
+        "Longitude",
+        "Sun_Longitude",
+        "Sun_Nakshatra",
+        "Sun_Pada",
+        "Moon_Longitude",
+        "Moon_Nakshatra",
+        "Moon_Pada",
+        "Mars_Longitude",
+        "Mars_Nakshatra",
+        "Mars_Pada",
+        "Mercury_Longitude",
+        "Mercury_Nakshatra",
+        "Mercury_Pada",
+        "Jupiter_Longitude",
+        "Jupiter_Nakshatra",
+        "Jupiter_Pada",
+        "Venus_Longitude",
+        "Venus_Nakshatra",
+        "Venus_Pada",
+        "Saturn_Longitude",
+        "Saturn_Nakshatra",
+        "Saturn_Pada",
+        "Rahu_Longitude",
+        "Rahu_Nakshatra",
+        "Rahu_Pada",
+        "Ketu_Longitude",
+        "Ketu_Nakshatra",
+        "Ketu_Pada",
+    ]
+
+    missing_cols = [col for col in ordered_cols if col not in out.columns]
+    if missing_cols:
+        raise ValueError(f"Missing required columns before export: {missing_cols}")
+
+    out = out[ordered_cols]
+
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out.to_csv(out_path, index=False)
